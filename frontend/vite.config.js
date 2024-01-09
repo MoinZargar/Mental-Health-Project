@@ -5,7 +5,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   server:{
     proxy:{
-      '/predict':'http://localhost:5000',
+      '/api/predict':'http://localhost:5000',
+      '/api/signup':'http://localhost:5000',
+      '/api/login':'http://localhost:5000',
+      '/api/logout':'http://localhost:5000',
+      '/api/connectDb':'http://localhost:5000',
+      '/api/getCurrentUser':'http://localhost:5000'
     },
   },
   plugins: [react()],

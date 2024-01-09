@@ -1,15 +1,44 @@
-from flask import Flask, jsonify, render_template, request
+import bcrypt
+from flask import Flask, jsonify, render_template, request, session
 import pickle
 import re
 import nltk
 from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 import numpy as np
-stopwords_set = set(stopwords.words('english'))
-emoji_pattern = re.compile('(?::|;|=)(?:-)?(?:\)|\(|D|P)')
+from flask_mysqldb import MySQL
+
+
 
 
 app = Flask(__name__)
+
+app.config['MYSQL_HOST'] ='localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] ='Alchemist@123'
+app.config['MYSQL_DB'] = 'MentalHealth'
+app.config['SECRET_KEY'] ='5791628bbdedcr13ce0c676dfde280ba245'
+app.config['PORT']='3306'
+
+mysql = MySQL(app)
+
+def create_database():
+   cursor = mysql.connection.cursor()
+   cursor.execute("CREATE DATABASE IF NOT EXISTS MentalHealth")
+   cursor.execute("USE MentalHealth")
+   cursor.execute(
+   '''CREATE TABLE IF NOT EXISTS user (
+    email VARCHAR(120) PRIMARY KEY,
+    username VARCHAR(80) NOT NULL,
+    password VARCHAR(160) NOT NULL
+   
+   );'''
+   )
+   cursor.close()
+   
+   
+stopwords_set = set(stopwords.words('english'))
+emoji_pattern = re.compile('(?::|;|=)(?:-)?(?:\)|\(|D|P)')
 
 # Load the sentiment analysis model and TF-IDF vectorizer
 with open('clf.pkl', 'rb') as f:
@@ -43,7 +72,27 @@ def preprocessing(text):
 
     return " ".join(text)
 
-@app.route('/predict', methods=[ 'POST'])
+#hashing password
+def hash_password(password):
+    # Generate a salt
+    password = password.encode("utf-8")
+    hash = bcrypt.hashpw(password, bcrypt.gensalt())
+    stored_password = hash.decode("utf-8")
+    return stored_password
+
+# Verify a password against the hashed password in the database
+def verify_password(password, hashed_password):
+    if bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8")):
+       return True
+    return False
+
+@app.route("/api/connectDb", methods=['GET', 'POST'])
+def connectDb():
+    create_database()
+    return jsonify({'message': 'database connected','status':200})
+    
+
+@app.route('/api/predict', methods=[ 'POST'])
 def analyze_sentiment():
     if request.method == 'POST':
         try:
@@ -74,7 +123,85 @@ def analyze_sentiment():
             print(f"Error analyzing sentiment: {e}")
             return jsonify({'sentiment': 'Internal Server Error'}), 500
 
- 
+@app.route('/api/signup', methods=['GET','POST'])
+def signup():
+    if request.method == 'POST':
+        print("inside signup")
+        try:
+            email = request.json['email']
+            username = request.json['name']
+            password = request.json['password']
+            hashed_password = hash_password(password)
+            cursor = mysql.connection.cursor()
+            
+            # Check if the email already exists
+            cursor.execute("SELECT * FROM user WHERE email=%s", (email,))
+            result = cursor.fetchone()
+            
+            # If new user, create an entry in the database
+            if result is None:
+                cursor.execute("INSERT INTO user(email, username, password) VALUES(%s, %s, %s)", (email, username, hashed_password))
+                mysql.connection.commit()
+                cursor.close()
+                session['email'] = email
+                session['username']=username
+                return jsonify({'email':email, 'username':username,'status':200})
+            else:
+                cursor.close()
+                return jsonify({'message': 'Email already exists','status':400})
+        except Exception as e:
+            print(f"Error creating user: {e}")
+            return jsonify({'message': 'Internal Server Error','status':500})
+    return jsonify({'message': 'Method Not Allowed','status':405})
+        
+@app.route('/api/login', methods=['GET','POST'])
+def login():
+    if request.method == 'POST':
+        try:
+            email = request.json['email']
+            password = request.json['password']
+            cursor = mysql.connection.cursor()
+            cursor.execute("SELECT * FROM user WHERE email=%s", (email,))
+            result = cursor.fetchone()
+            cursor.close()
+            if result is None:
+                return jsonify({'message': 'Please check email and Password','status':400})
+            else:
+                if verify_password(password, result[2]):
+                    session['email'] = email
+                    session['username']=result[1]
+                    name=session['username']
+                    return jsonify({'email':email, 'username':name,'status':200})
+                else:
+                    return jsonify({'message': 'Please check email and Password','status':400})
+        except Exception as e:
+            print(f"Error logging in: {e}")
+            return jsonify({'message': 'Internal Server Error','status':500})
+    return jsonify({'message': 'Method Not Allowed','status':405})
 
+@app.route('/api/getCurrentUser', methods=['GET','POST'])
+def getCurrentUser():
+    if request.method == 'GET':
+        try:
+            if 'email' in session:
+                return jsonify({'email': session['email'],'username':session['username'],'status':200})
+            else:
+                return jsonify({'message': 'User not logged in','status':400})
+        except Exception as e:
+            print(f"Error getting current user: {e}")
+            return jsonify({'message': 'Internal Server Error','status':500})
+    return jsonify({'message': 'Method Not Allowed','status':405})
+
+@app.route('/api/logout', methods=['GET','POST'])
+def logout():
+    if request.method == 'GET':
+        try:
+            session.pop('email', None)
+            session.pop('username',None)
+            return jsonify({'message': 'Logout successful','status':200})
+        except Exception as e:
+            print(f"Error logging out: {e}")
+            return jsonify({'message': 'Internal Server Error','status':500})
+    return jsonify({'message': 'Method Not Allowed','status':405})
 if __name__ == '__main__':
     app.run(debug=True)
