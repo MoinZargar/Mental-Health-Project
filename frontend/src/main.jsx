@@ -10,6 +10,9 @@ import  Home  from './components/pages/Home.jsx'
 import Signup from './components/pages/Signup.jsx'
 import Login from './components/pages/Login.jsx'
 import Sentiment from './components/pages/Sentiment.jsx'
+import Test from './components/pages/Test.jsx'
+import SubTests from './components/pages/SubTests.jsx'
+import TestPage from './components/TestPage.jsx'
 const router = createBrowserRouter([
   {
     path: "/",
@@ -23,6 +26,33 @@ const router = createBrowserRouter([
           path: "/sentiment",
           element: <Sentiment />,
         },
+        {
+          path: "/tests",
+          element: (
+            <AuthLayout authentication={true}>
+                <TestPage />
+            </AuthLayout>
+        ),
+        children: [
+          {
+            path: "/tests",
+            element: (
+              <AuthLayout authentication={true}>
+                  <Test />
+              </AuthLayout>
+            ),
+          },
+          {
+            path: "/tests/:type",
+            element: (
+            <AuthLayout authentication={true}>
+                <SubTests />
+            </AuthLayout>
+        ),
+          },
+        ],
+        },
+       
         {
           path: "/signup",
           element: (

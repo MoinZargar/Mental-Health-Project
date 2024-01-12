@@ -22,21 +22,36 @@ app.config['PORT']='3306'
 
 mysql = MySQL(app)
 
+
 def create_database():
    cursor = mysql.connection.cursor()
    cursor.execute("CREATE DATABASE IF NOT EXISTS MentalHealth")
    cursor.execute("USE MentalHealth")
    cursor.execute(
-   '''CREATE TABLE IF NOT EXISTS user (
+   '''CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(120) PRIMARY KEY,
     username VARCHAR(80) NOT NULL,
     password VARCHAR(160) NOT NULL
    
    );'''
    )
+   cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tests (
+            email VARCHAR(120) REFERENCES users(email),
+            username VARCHAR(80) NOT NULL,
+            `Depression Test` INT(30),
+            `Anxiety Test` INT(30),
+            `Bipolar Test` INT(30),
+            `Schizophrenia Test` INT(30),
+            PRIMARY KEY (email, username)
+        );
+    ''')
+
    cursor.close()
-   
-   
+
+with app.app_context():
+    create_database()
+
 stopwords_set = set(stopwords.words('english'))
 emoji_pattern = re.compile('(?::|;|=)(?:-)?(?:\)|\(|D|P)')
 
@@ -86,10 +101,6 @@ def verify_password(password, hashed_password):
        return True
     return False
 
-@app.route("/api/connectDb", methods=['GET', 'POST'])
-def connectDb():
-    create_database()
-    return jsonify({'message': 'database connected','status':200})
     
 
 @app.route('/api/predict', methods=[ 'POST'])
@@ -135,12 +146,12 @@ def signup():
             cursor = mysql.connection.cursor()
             
             # Check if the email already exists
-            cursor.execute("SELECT * FROM user WHERE email=%s", (email,))
+            cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
             result = cursor.fetchone()
             
             # If new user, create an entry in the database
             if result is None:
-                cursor.execute("INSERT INTO user(email, username, password) VALUES(%s, %s, %s)", (email, username, hashed_password))
+                cursor.execute("INSERT INTO users(email, username, password) VALUES(%s, %s, %s)", (email, username, hashed_password))
                 mysql.connection.commit()
                 cursor.close()
                 session['email'] = email
@@ -161,7 +172,7 @@ def login():
             email = request.json['email']
             password = request.json['password']
             cursor = mysql.connection.cursor()
-            cursor.execute("SELECT * FROM user WHERE email=%s", (email,))
+            cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
             result = cursor.fetchone()
             cursor.close()
             if result is None:
@@ -203,5 +214,44 @@ def logout():
             print(f"Error logging out: {e}")
             return jsonify({'message': 'Internal Server Error','status':500})
     return jsonify({'message': 'Method Not Allowed','status':405})
+
+#route for submitting test scores of test like depression,anxiety,bipolar,schizophrenia
+@app.route('/api/submitTest', methods=['GET','POST'])
+def submitTest():
+    if request.method == 'POST':
+        try:
+            email = session['email']
+            username =session['username']
+            testType = request.json['TestType']
+            score = request.json['TotalScore']
+            cursor = mysql.connection.cursor()
+            cursor.execute("SELECT * FROM tests WHERE email=%s", (email,))
+            result = cursor.fetchone()
+            # Check if the user exists in the 'tests' table
+            cursor.execute("SELECT * FROM tests WHERE email=%s AND username=%s", (email, username))
+            result = cursor.fetchone()
+
+            if result:
+                # If the user exists, update the score for the specified testType
+                update_query = f"UPDATE tests SET `{testType}`=%s WHERE email=%s AND username=%s"
+                cursor.execute(update_query, (score, email, username))
+            else:
+                # If the user doesn't exist, create a new entry in the 'tests' table
+                insert_query = "INSERT INTO tests (email, username, `Depression Test`, `Anxiety Test`, `Bipolar Test`, `Schizophrenia Test`) VALUES (%s, %s, 0, 0, 0, 0)"
+                cursor.execute(insert_query, (email, username))
+                
+                # Update the score for the specified testType
+                update_query = f"UPDATE tests SET `{testType}`=%s WHERE email=%s AND username=%s"
+                cursor.execute(update_query, (score, email, username))
+
+            mysql.connection.commit()
+            cursor.close()
+            return jsonify({'message': 'Test submitted successfully','status':200})
+        except Exception as e:
+            print(f"Error submitting test: {e}")
+            return jsonify({'message': 'Internal Server Error','status':500})
+    return jsonify({'message': 'Method Not Allowed','status':405})
+
+
 if __name__ == '__main__':
     app.run(debug=True)
