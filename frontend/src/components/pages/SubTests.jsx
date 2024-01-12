@@ -16,6 +16,7 @@ function SubTests(){
 
   const SubmitScore=async()=>{
     try {
+     
       await testService.submitTest({TestType,TotalScore})
      
     } catch (error) {
@@ -23,7 +24,8 @@ function SubTests(){
     }
     
     
-    Navigate('/tests')
+     Navigate(`/result/${TestType}`)
+   
   }
   
   const handleClick = (option,index) => {
@@ -49,17 +51,17 @@ function SubTests(){
 
   useEffect(() => {
     switch(TestType){
-      case 'Depression Test':
+      case 'depression':
          setQuestions(TestQna.DepressionTest());
          
          break;
-      case 'Anxiety Test':
+      case 'anxiety':
          setQuestions(TestQna.AnxietyTest());
           break;
-      case 'Bipolar Test':
+      case 'bipolar':
          setQuestions(TestQna.BipolarTest());
           break;
-      case 'Schizophrenia Test':
+      case 'schizophrenia':
          setQuestions(TestQna.SchizophreniaTest());
           break;
       default:

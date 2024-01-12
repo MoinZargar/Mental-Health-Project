@@ -13,6 +13,8 @@ import Sentiment from './components/pages/Sentiment.jsx'
 import Test from './components/pages/Test.jsx'
 import SubTests from './components/pages/SubTests.jsx'
 import TestPage from './components/TestPage.jsx'
+import Result from './components/pages/Result.jsx'
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -52,7 +54,14 @@ const router = createBrowserRouter([
           },
         ],
         },
-       
+        {
+          path: "/result/:type",
+          element: (
+              <AuthLayout authentication={true}>
+                  <Result />
+              </AuthLayout>
+          ),
+        },
         {
           path: "/signup",
           element: (

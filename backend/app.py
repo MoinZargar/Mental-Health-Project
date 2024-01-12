@@ -39,11 +39,10 @@ def create_database():
         CREATE TABLE IF NOT EXISTS tests (
             email VARCHAR(120) REFERENCES users(email),
             username VARCHAR(80) NOT NULL,
-            `Depression Test` INT(30),
-            `Anxiety Test` INT(30),
-            `Bipolar Test` INT(30),
-            `Schizophrenia Test` INT(30),
-            PRIMARY KEY (email, username)
+            depression INT(30),
+            anxiety INT(30),
+            bipolar INT(30),
+            schizophrenia INT(30)
         );
     ''')
 
@@ -237,7 +236,7 @@ def submitTest():
                 cursor.execute(update_query, (score, email, username))
             else:
                 # If the user doesn't exist, create a new entry in the 'tests' table
-                insert_query = "INSERT INTO tests (email, username, `Depression Test`, `Anxiety Test`, `Bipolar Test`, `Schizophrenia Test`) VALUES (%s, %s, 0, 0, 0, 0)"
+                insert_query = "INSERT INTO tests (email,username,depression,anxiety,bipolar,schizophrenia) VALUES (%s, %s, 0, 0, 0, 0)"
                 cursor.execute(insert_query, (email, username))
                 
                 # Update the score for the specified testType
@@ -252,6 +251,25 @@ def submitTest():
             return jsonify({'message': 'Internal Server Error','status':500})
     return jsonify({'message': 'Method Not Allowed','status':405})
 
+#route for getting test scores of test like depression,anxiety,bipolar,schizophrenia
+@app.route('/api/getTestScore', methods=['GET','POST'])
+def getTestScore():
+    if request.method == 'GET':
+        try:
+            email = session['email']
+            username =session['username']
+            cursor = mysql.connection.cursor()
+            cursor.execute("SELECT * FROM tests WHERE email=%s AND username=%s", (email, username))
+            result = cursor.fetchone()
+            cursor.close()
+            if result is None:
+                return jsonify({'message': 'User not found','status':400})
+            else:
+                return jsonify({'depression': result[2], 'anxiety': result[3], 'bipolar': result[4], 'schizophrenia': result[5],'status':200})
+        except Exception as e:
+            print(f"Error getting test scores: {e}")
+            return jsonify({'message': 'Internal Server Error','status':500})
+    return jsonify({'message': 'Method Not Allowed','status':405})
 
 if __name__ == '__main__':
     app.run(debug=True)

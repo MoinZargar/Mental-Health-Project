@@ -11,6 +11,7 @@ export default defineConfig({
       '/api/logout':'http://localhost:5000',
       '/api/getCurrentUser':'http://localhost:5000',
       '/api/submitTest':'http://localhost:5000',
+      '/api/getTestScore':'http://localhost:5000',
     },
   },
   plugins: [react()],
