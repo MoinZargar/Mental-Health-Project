@@ -14,7 +14,7 @@ export default function Signup(){
 
     const create=async (data)=>{
         setError('')
-       console.log(data)
+      
 
         try {
             

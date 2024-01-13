@@ -46,7 +46,7 @@ function Header() {
 
   return (
     
-    <header className='py-3 shadow bg-gray-800 text-white'>
+    <header className='py-4 shadow bg-gray-800 text-white'>
    
       <nav className='flex items-center justify-between mr-12'>
 
@@ -88,7 +88,7 @@ function Header() {
 
         {/* Responsive navigation for mobile screens */}
         {menuOpen && (
-          <div className='md:hidden absolute top-16 right-0 bg-gray-800 p-4 space-y-2'>
+          <div className='md:hidden absolute top-14 right-0 bg-gray-800 p-5 space-y-2'>
             {navItems.map((item) =>
               item.active ? (
                 <button
