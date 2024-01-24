@@ -1,0 +1,217 @@
+/* ChatWindow.css */
+
+/* Customize these styles according to your design preferences */
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.chat-container {
+  display: flex;
+  overflow: hidden;
+}
+
+.contact-list {
+  width: 25%;
+  height: 100vh;
+  background-color: #128c7e; /* Updated sidebar color */
+  color: white;
+  padding: 20px;
+  overflow-y: auto;
+  max-height: 90vh;
+  transition: transform 0.3s ease-in-out;
+}
+
+.contact-list.hidden {
+  transform: translateX(-100%);
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.contact-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.contact-item.selected {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.profile-picture {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.contact-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-name {
+  margin: 0;
+}
+
+.last-seen {
+  font-size: 12px;
+}
+
+.chat-window {
+  flex: 1;
+  height: 100vh; 
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  transition: transform 0.3s ease-in-out;
+}
+
+
+.chat-header {
+  background-color: #075e54; /* WhatsApp header color */
+  padding: 10px;
+  color: white;
+  display: flex;
+  align-items: center;
+}
+
+.profile-picture {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.contact-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.contact-name {
+  margin: 0;
+  font-size: 16px;
+}
+
+.last-seen {
+  font-size: 12px;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.message {
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  max-width: 70%;
+}
+
+.incoming {
+  background-color: #f1f0f0; /* Incoming message color */
+  align-self: flex-start;
+}
+
+.outgoing {
+  background-color: #dcf8c6; /* Outgoing message color */
+  align-self: flex-end;
+}
+
+.message-text {
+  margin: 0;
+}
+
+.chat-input {
+  display: flex;
+  align-items: center;
+  padding: 22px;
+  margin-bottom: 8 px;
+  background-color: #ece5dd; /* Input area color */
+}
+
+.message-input {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 15px;
+  margin-right: 10px;
+}
+
+.send-button {
+  background-color: #128c7e; /* Send button color */
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 15px;
+  cursor: pointer;
+}
+
+.select-contact-message {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  color: #757575;
+}
+
+/* Media query for small screens */
+@media only screen and (max-width: 767px) {
+  .contact-list {
+    width: 100%;
+    height: 100vh;
+    max-height: 90vh;
+    top: 0;
+    left: 0;
+    background-color: #128c7e; /* Updated sidebar color */
+    overflow-y: auto;
+    transition: transform 0.3s ease-in-out;
+    margin-top: 0;
+  }
+
+  .contact-list.hidden {
+    transform: translateX(-100%);
+  }
+
+  .chat-window {
+    width: 100%;
+    top: 0;
+    left: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    transition: left 0.3s ease-in-out;
+    margin-top: 0;
+  }
+
+  .chat-window.open {
+    left: 0;
+  }
+  .chat-input{
+    padding: 10px;
+    margin-bottom: 0;
+  }
+  .contact-list.open-chat {
+    display: none;
+  }
+
+  .contact-item {
+    cursor: pointer;
+  }
+  .chat-header{
+    margin-top: 0;
+  }
+}

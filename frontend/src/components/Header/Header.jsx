@@ -96,6 +96,7 @@ function Header() {
                   onClick={() => {
                     navigate(item.slug);
                     toggleMenu();
+                    console.log("clicked");
                   }}
                   className='w-full px-4 py-2 text-left hover:bg-blue-600 rounded-full'
                 >

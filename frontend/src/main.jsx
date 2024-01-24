@@ -14,6 +14,7 @@ import Test from './components/pages/Test.jsx'
 import SubTests from './components/pages/SubTests.jsx'
 import TestPage from './components/TestPage.jsx'
 import Result from './components/pages/Result.jsx'
+import ChatWindow from './components/pages/Chat/ChatWindow.jsx'
 
 const router = createBrowserRouter([
   {
@@ -62,6 +63,15 @@ const router = createBrowserRouter([
               </AuthLayout>
           ),
         },
+        {
+          path: "/chat",
+          element: (
+              <AuthLayout authentication={true}>
+                  <ChatWindow />
+              </AuthLayout>
+          ),
+        },
+
         {
           path: "/signup",
           element: (

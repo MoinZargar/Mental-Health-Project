@@ -55,25 +55,25 @@ function Result(){
 
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
     <Card
-      url="/"
+      url="/chat"
       children="Join Room"
       title="Depression Support"
       content="For those experiencing overwhelming sadness or despair, low energy, or negative self-image."
     />
     <Card
-      url="/"
+      url="/chat"
       children="Join Room"
       title="Anxiety Warriors"
       content="For those dealing with extreme worry, fear, nervousness, and restlessness affecting day-to-day life."
     />
     <Card
-      url="/"
+      url="/chat"
       children="Join Room"
       title="Bipolar Buddies"
       content="For those navigating extreme mood swings or unusual shifts in mood and energy."
     />
     <Card
-      url="/"
+      url="/chat"
       children="Join Room"
       title="Schizophrenia Allies"
       content="For those feeling like their brain is playing tricks on them—seeing, hearing, or believing things that don't seem real or quite right."
