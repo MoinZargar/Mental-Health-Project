@@ -1,71 +1,180 @@
-// ChatWindow.jsx
 
-import React, { useState } from 'react';
+import React, { useState,useEffect,useMemo } from 'react';
+import { io } from "socket.io-client";
 import './ChatWindow.css';
+import { useParams } from 'react-router-dom';
+import getAuthService from '../../../Services/auth.js'
+import chatService from '../../../Services/chatService.js'
 
 const ChatWindow = () => {
-  const [selectedContact, setSelectedContact] = useState(null);
+  const roomName=useParams().room;
+  const [selectedRoom, setSelectedRoom] = useState(roomName);
+  const [message, setMessage] = useState("");
+  const[currentUser,setCurrentUser]=useState(null);
+  const[messageList,setMessageList]=useState([]);
+  const[roomList,setRoomList]=useState([]);
+  
+  const socket = useMemo(
+    () =>
+      io("http://localhost:5000", {
+        allowEIO3: true 
+      }),
+     
+    []
+  );
 
-  const contacts = [
-    { id: 1, name: 'John Doe', lastSeen: 'Last seen recently' },
-    { id: 2, name: 'Jane Smith', lastSeen: 'Online' },
+  const handleSend = (e) => {
+    e.preventDefault();
+    socket.emit("send-message", {...currentUser,roomName:selectedRoom, message: message});
+    setMessage("");
    
-    // Add more contacts as needed
-  ];
+  };
+  
+ 
 
-  const handleContactClick = (contact) => {
-    setSelectedContact(contact);
+  const rooms = ()=>{
+    chatService.getRooms()
+    .then((data)=>{
+
+      if(data.status==200){
+       
+        let list=[];
+        for (let key in data) {
+
+          if (data[key]===1) {
+            list.push(key);
+            
+          }
+        }
+      
+       setRoomList(list);
+      }
+
+      
+    })
+  }
+  
+
+  const handleRoomClick = (room) => {
+    setSelectedRoom(room);
   };
 
+  const handleBackClick = () => {
+    setSelectedRoom(null);
+  };
+ 
+  useEffect(() => {
+    
+    socket.on("connect", () => {
+     
+      console.log("connected", socket.id);
+    });
+
+     getAuthService.getCurrentUser()
+    .then((user)=>{
+    if(user.status==200){
+
+      setCurrentUser(user);
+      //fetch all rooms that user is in
+      rooms();
+      //join room
+      
+      socket.emit("join-room", { ...user, roomName: selectedRoom });
+      //fetch all messages from room
+      socket.on("receive-all-chats", (data) => {
+        setMessageList(data);
+      });
+      
+    }
+  });
+  //receive message
+  socket.on("receive-message", (data) => {
+    setMessageList((prevMessages) => [...prevMessages, ...data]);
+    
+  });
+  return () => {
+    socket.off("receive-message");
+  };
+  }, [selectedRoom]);
+  
   return (
     <div className="chat-container">
-      <div className={`contact-list ${selectedContact ? 'open-chat' : ''}`}>
-        {contacts.map((contact) => (
+      <div className={`contact-list ${selectedRoom ? 'open-chat' : ''}`}>
+        {roomList.map((room) => (
           <div
-            key={contact.id}
-            className={`contact-item ${selectedContact === contact ? 'selected' : ''}`}
-            onClick={() => handleContactClick(contact)}
+            key={room}
+            className={`contact-item ${selectedRoom === room ? 'selected' : ''}`}
+            onClick={() => handleRoomClick(room)}
           >
-            <img
+            {/* <img
               src={`profile-pictures/${contact.id}.jpg`} // Replace with the actual path to the profile picture
-              alt={contact.name}
+              alt={room}
               className="profile-picture"
-            />
+            /> */}
             <div className="contact-details">
-              <h3 className="contact-name">{contact.name}</h3>
-              <span className="last-seen">{contact.lastSeen}</span>
+              <h3 className="contact-name">{room}</h3>
+              
             </div>
           </div>
         ))}
       </div>
-      <div className={`chat-window ${selectedContact ? 'open' : ''}`}>
-        {selectedContact ? (
+      <div className={`chat-window ${selectedRoom ? 'open' : ''}`}>
+        {selectedRoom ? (
           <>
-            <div className="chat-header">
-              <img
+            <div className={`chat-header ${window.innerWidth <= 767 ? 'with-back-arrow' : ''}`}>
+              {window.innerWidth <= 767 && (
+                <div className="back-arrow" onClick={handleBackClick}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                  </svg>
+                
+                </div>
+              )}
+              {/* <img
                 src={`profile-pictures/${selectedContact.id}.jpg`} // Replace with the actual path to the profile picture
                 alt={selectedContact.name}
                 className="profile-picture"
-              />
+              /> */}
               <div className="contact-details">
-                <h3 className="contact-name">{selectedContact.name}</h3>
-                <span className="last-seen">{selectedContact.lastSeen}</span>
+                <h3 className="contact-name">{selectedRoom}</h3>
+                
               </div>
             </div>
             <div className="chat-messages">
-              {/* Render chat messages here */}
-              <div className="message incoming">
-                <p className="message-text">Hello!</p>
+              {
+                 messageList.map((message, index) => (
+                  (currentUser.email === message.email) ? (
+                    <div key={index} className="message incoming">
+                      <p className="message-text">
+                        <strong>{message.username}:</strong> {message.message}
+                      </p>
+                    </div>
+                  ) : (
+                    <div key={index} className="message outgoing">
+                      <p className="message-text">
+                        <strong>{message.username}:</strong> {message.message}
+                      </p>
+                    </div>
+                  )
+                ))
                 
-              </div>
-              <div className="message outgoing">
-                <p className="message-text">Hi there!</p>
-              </div>
-              {/* Add more messages as needed */}
+               }
+              
+             
             </div>
             <div className="chat-input">
-              <input type="text" placeholder="Type a message" className="message-input" />
-              <button className="send-button">Send</button>
+              <input type="text" value={message} onChange={(e)=>setMessage(e.target.value)} placeholder="Type a message" className="message-input" />
+              <button onClick={handleSend} className="send-button">Send</button>
             </div>
           </>
         ) : (

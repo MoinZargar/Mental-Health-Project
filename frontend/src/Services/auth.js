@@ -21,7 +21,9 @@ class authentication{
    async getCurrentUser(){
         try {
             const response = await axios.get('/api/getCurrentUser');
+            
             return response.data;
+            
         } catch (error) {
             return error;
         }

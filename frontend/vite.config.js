@@ -12,6 +12,7 @@ export default defineConfig({
       '/api/getCurrentUser':'http://localhost:5000',
       '/api/submitTest':'http://localhost:5000',
       '/api/getTestScore':'http://localhost:5000',
+      '/api/getRooms':'http://localhost:5000',
     },
   },
   plugins: [react()],

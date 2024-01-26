@@ -1,5 +1,7 @@
+import email
 import bcrypt
 from flask import Flask, jsonify, render_template, request, session
+from flask_socketio import emit, join_room, leave_room, send, SocketIO
 import pickle
 import re
 import nltk
@@ -8,19 +10,20 @@ from nltk.corpus import stopwords
 import numpy as np
 from flask_mysqldb import MySQL
 
-
-
-
 app = Flask(__name__)
+
 
 app.config['MYSQL_HOST'] ='localhost'
 app.config['MYSQL_USER'] = 'root'
 app.config['MYSQL_PASSWORD'] ='Alchemist@123'
 app.config['MYSQL_DB'] = 'MentalHealth'
-app.config['SECRET_KEY'] ='5791628bbdedcr13ce0c676dfde280ba245'
+app.config['SECRET_KEY'] ='5791628hghijdedcr13ce0c676dfde280ba245'
+app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PORT']='3306'
 
 mysql = MySQL(app)
+socketio = SocketIO(app,manage_session=False,cors_allowed_origins="http://localhost:5173")
+
 
 
 def create_database():
@@ -36,15 +39,66 @@ def create_database():
    );'''
    )
    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tests (
-            email VARCHAR(120) REFERENCES users(email),
-            username VARCHAR(80) NOT NULL,
-            depression INT(30),
-            anxiety INT(30),
-            bipolar INT(30),
-            schizophrenia INT(30)
-        );
-    ''')
+    CREATE TABLE IF NOT EXISTS tests (
+        email VARCHAR(120),
+        username VARCHAR(80) NOT NULL,
+        depression INT(30),
+        anxiety INT(30),
+        bipolar INT(30),
+        schizophrenia INT(30),
+        FOREIGN KEY (email) REFERENCES users(email)
+    );
+''')
+   cursor.execute('''CREATE TABLE IF NOT EXISTS chatRooms (
+    email VARCHAR(120) PRIMARY KEY,
+    username VARCHAR(80) NOT NULL,
+    depression BOOLEAN DEFAULT false,
+    anxiety BOOLEAN DEFAULT false,
+    bipolar BOOLEAN DEFAULT false,
+    schizophrenia BOOLEAN DEFAULT false,
+    FOREIGN KEY (email) REFERENCES users(email)
+   );
+''')
+   cursor.execute('''
+    CREATE TABLE IF NOT EXISTS depression (
+        id INT(11) AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(120),
+        username VARCHAR(80),
+        chats TEXT,
+        sentiment VARCHAR(255),
+        FOREIGN KEY (email) REFERENCES users(email)
+    );
+''')
+   cursor.execute('''
+    CREATE TABLE IF NOT EXISTS anxiety (
+        id INT(11) AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(120),
+        username VARCHAR(80),
+        chats TEXT,
+        sentiment VARCHAR(255),
+        FOREIGN KEY (email) REFERENCES users(email)
+    );
+''')
+   cursor.execute('''
+    CREATE TABLE IF NOT EXISTS bipolar (
+        id INT(11) AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(120),
+        username VARCHAR(80),
+        chats TEXT,
+        sentiment VARCHAR(255),
+        FOREIGN KEY (email) REFERENCES users(email)
+    );
+''')
+   cursor.execute('''
+    CREATE TABLE IF NOT EXISTS schizophrenia (
+        id INT(11) AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(120),
+        username VARCHAR(80),
+        chats TEXT,
+        sentiment VARCHAR(255),
+        FOREIGN KEY (email) REFERENCES users(email)
+    );
+''')
 
    cursor.close()
 
@@ -136,7 +190,6 @@ def analyze_sentiment():
 @app.route('/api/signup', methods=['GET','POST'])
 def signup():
     if request.method == 'POST':
-        print("inside signup")
         try:
             email = request.json['email']
             username = request.json['name']
@@ -155,6 +208,7 @@ def signup():
                 cursor.close()
                 session['email'] = email
                 session['username']=username
+                
                 return jsonify({'email':email, 'username':username,'status':200})
             else:
                 cursor.close()
@@ -271,5 +325,100 @@ def getTestScore():
             return jsonify({'message': 'Internal Server Error','status':500})
     return jsonify({'message': 'Method Not Allowed','status':405})
 
+#route for getting chat rooms of user where he/she is present
+@app.route('/api/getRooms', methods=['GET','POST'])
+def getChatRooms():
+    
+    if request.method == 'GET':
+    
+        try:
+            email = session['email']
+            cursor = mysql.connection.cursor()
+            cursor.execute("SELECT * FROM chatRooms WHERE email=%s", (email,))
+            result = cursor.fetchone()
+            cursor.close()
+            if result is None:
+                return jsonify({'message': 'User not found','status':400})
+            else:
+                
+                return jsonify({'Depression Support Room': result[2], 'Anxiety Support Room': result[3], 'Bipolar  Support Room': result[4], 'Schizophrenia Support Room': result[5],'status':200})
+        except Exception as e:
+            print(f"Error getting chat rooms: {e}")
+            return jsonify({'message': 'Internal Server Error','status':500})
+    return jsonify({'message': 'Method Not Allowed','status':405})
+
+# sockets for chat
+@socketio.on("connect")
+def connect():
+    print("connected")
+
+#socket for joining room
+    
+@socketio.on("join-room")
+def on_join(data):
+    try:
+        room = data['roomName']
+        email = data['email']
+        username = data['username']
+        cursor = mysql.connection.cursor()
+        table_name = f"`{room}`"
+        join_room(room)
+        # Fix the SQL query formatting
+        cursor.execute(f"SELECT * FROM chatRooms WHERE email=%s", (email,))
+        result = cursor.fetchone()
+        
+        if result is None:
+            # If the user doesn't exist, create a new entry in the table
+            insert_query = f"INSERT INTO chatRooms (email, username) VALUES (%s, %s)"
+            cursor.execute(insert_query, (email, username,))
+            cursor.execute(f"UPDATE chatRooms SET `{room}`=true WHERE email=%s", (email,))
+            mysql.connection.commit()
+        else:
+            # If the user exists, update the room status
+            cursor.execute(f"UPDATE chatRooms SET `{room}`=true WHERE email=%s", (email,))
+            mysql.connection.commit()
+      # check for previous chats of user in room
+        select_query = f"SELECT email, username, chats FROM {table_name}"
+        cursor.execute(select_query)
+        chats_data = cursor.fetchall()
+        print("chats_data:", chats_data)
+        cursor.close()
+
+        if chats_data is not None:
+        # Create an array to store chats
+            all_chats = [{'email':row[0],'username': row[1], 'message': row[2]} for row in chats_data]
+            # Emit the array of chats to all users in the room
+            emit("receive-all-chats", all_chats, room=room)
+        
+
+    except Exception as e:
+        print("Error:", e)
+
+#socket for recieving message from client side 
+@socketio.on("send-message")
+def on_send(data):
+    try:
+        room = data['roomName']
+        email = data['email']
+        username = data['username']
+        chats = data['message']
+        cursor = mysql.connection.cursor()
+    
+        # Use proper string formatting for table name
+        table_name = f"`{room}`"
+        insert_query = f"INSERT INTO {table_name} (email, username,chats) VALUES (%s, %s,%s)"
+        cursor.execute(insert_query, (email, username,chats,))
+        mysql.connection.commit()
+        cursor.close()
+        # Emit the message to all users in the room
+        emit("receive-message", [{'email': email, 'username': username, 'message': chats}], room=room)
+        
+    except Exception as e:
+        print("Error:", e)
+
+
+
+
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)

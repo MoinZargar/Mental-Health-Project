@@ -64,7 +64,7 @@ const router = createBrowserRouter([
           ),
         },
         {
-          path: "/chat",
+          path: "/chat/:room",
           element: (
               <AuthLayout authentication={true}>
                   <ChatWindow />
