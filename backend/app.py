@@ -1,15 +1,8 @@
-import email
 import bcrypt
 from flask import Flask, jsonify, render_template, request, session
 from flask_socketio import emit, join_room, leave_room, send, SocketIO
-import pickle
-import re
-import nltk
-from nltk.stem.porter import PorterStemmer
-from nltk.corpus import stopwords
-import numpy as np
 from flask_mysqldb import MySQL
-
+from Text_Analysis import analyze_sentiment
 app = Flask(__name__)
 
 
@@ -105,40 +98,6 @@ def create_database():
 with app.app_context():
     create_database()
 
-stopwords_set = set(stopwords.words('english'))
-emoji_pattern = re.compile('(?::|;|=)(?:-)?(?:\)|\(|D|P)')
-
-# Load the sentiment analysis model and TF-IDF vectorizer
-with open('clf.pkl', 'rb') as f:
-    clf = pickle.load(f)
-with open('tfidf.pkl', 'rb') as f:
-    tfidf = pickle.load(f)
-
-
-
-
-
-def preprocessing(text):
-    
-
-    # Remove HTML tags
-    text = re.sub('<[^>]*>', '', text)
-    
-    # Remove URLs
-    text = re.sub(r'http\S+', '', text)
-    
-    # Extract emojis
-    emojis = emoji_pattern.findall(text)
-    
-    # Remove non-alphanumeric characters, convert to lowercase, and join emojis
-    text = re.sub('[\W+]', ' ', text.lower()) + ' '.join(emojis).replace('-', '')
-    
-   
-    # Apply stemming and remove stopwords
-    prter = PorterStemmer()
-    text = [prter.stem(word) for word in text.split() if word not in stopwords_set]
-
-    return " ".join(text)
 
 #hashing password
 def hash_password(password):
@@ -155,37 +114,6 @@ def verify_password(password, hashed_password):
     return False
 
     
-
-@app.route('/api/predict', methods=[ 'POST'])
-def analyze_sentiment():
-    if request.method == 'POST':
-        try:
-            comment = request.json['text']
-            
-            print("Comment:", comment)
-            sentiment = "unknown"
-            preprocessed_comment = preprocessing(comment)
-            print("Preprocessed Comment:", preprocessed_comment)
-            comment_list = [preprocessed_comment]
-            comment_vector = tfidf.transform(comment_list)
-           
-            decision_scores = clf.decision_function(comment_vector)
-            print("Raw Decision Scores: [ Negative Postive ,Neutral]", decision_scores)
-            predicted_class = np.argmax(decision_scores)
-            
-            if predicted_class == 1:
-                sentiment="Positive comment"
-            elif predicted_class == 0:
-                sentiment="Negative comment"
-            else:
-                sentiment="Neutral comment"
-
-            
-            return jsonify({'sentiment': sentiment})
-        except Exception as e:
-            # Handle errors
-            print(f"Error analyzing sentiment: {e}")
-            return jsonify({'sentiment': 'Internal Server Error'}), 500
 
 @app.route('/api/signup', methods=['GET','POST'])
 def signup():
@@ -341,7 +269,7 @@ def getChatRooms():
                 return jsonify({'message': 'User not found','status':400})
             else:
                 
-                return jsonify({'Depression Support Room': result[2], 'Anxiety Support Room': result[3], 'Bipolar  Support Room': result[4], 'Schizophrenia Support Room': result[5],'status':200})
+                return jsonify({'depression': result[2], 'anxiety': result[3], 'bipolar': result[4], 'schizophrenia': result[5],'status':200})
         except Exception as e:
             print(f"Error getting chat rooms: {e}")
             return jsonify({'message': 'Internal Server Error','status':500})
@@ -358,11 +286,14 @@ def connect():
 def on_join(data):
     try:
         room = data['roomName']
-        email = data['email']
-        username = data['username']
+        email = session['email']
+        username =session['username']
+        sid=request.sid
         cursor = mysql.connection.cursor()
         table_name = f"`{room}`"
+        
         join_room(room)
+        print("joined room:", room)
         # Fix the SQL query formatting
         cursor.execute(f"SELECT * FROM chatRooms WHERE email=%s", (email,))
         result = cursor.fetchone()
@@ -371,24 +302,45 @@ def on_join(data):
             # If the user doesn't exist, create a new entry in the table
             insert_query = f"INSERT INTO chatRooms (email, username) VALUES (%s, %s)"
             cursor.execute(insert_query, (email, username,))
-            cursor.execute(f"UPDATE chatRooms SET `{room}`=true WHERE email=%s", (email,))
+            cursor.execute(f"UPDATE chatRooms SET {table_name}=true WHERE email=%s", (email,))
             mysql.connection.commit()
         else:
             # If the user exists, update the room status
-            cursor.execute(f"UPDATE chatRooms SET `{room}`=true WHERE email=%s", (email,))
+            cursor.execute(f"UPDATE chatRooms SET {table_name}=true WHERE email=%s", (email,))
             mysql.connection.commit()
-      # check for previous chats of user in room
-        select_query = f"SELECT email, username, chats FROM {table_name}"
-        cursor.execute(select_query)
+            cursor.close()
+        # Send a join message to all users in the room
+        join_message = f"{username} has joined the room."
+        emit("user-joined", join_message, room=room)
+        
+    except Exception as e:
+        print("Error:", e)
+
+#socket for fetching previous chats of user in room
+@socketio.on("get-all-chats")
+def get_all_chats(data):
+    try:
+        room = data['roomName']
+        email = session['email']
+        username =session['username']
+        sid=request.sid
+        print("room:", room)
+        cursor = mysql.connection.cursor()
+        table_name = f"`{room}`"
+        select_query = f"""SELECT email, username, chats,sentiment FROM {table_name}  WHERE id >= (
+         SELECT id FROM {table_name} WHERE email=%s ORDER BY id LIMIT 1
+         )
+         """
+        cursor.execute(select_query, (email,))
         chats_data = cursor.fetchall()
-        print("chats_data:", chats_data)
         cursor.close()
 
         if chats_data is not None:
+           
         # Create an array to store chats
-            all_chats = [{'email':row[0],'username': row[1], 'message': row[2]} for row in chats_data]
-            # Emit the array of chats to all users in the room
-            emit("receive-all-chats", all_chats, room=room)
+            all_chats = [{'email':row[0],'username': row[1], 'message': row[2],'sentiment': row[3]} for row in chats_data]
+            # Emit the array of all chats a user in the room
+            emit("receive-all-chats", all_chats, room=sid)
         
 
     except Exception as e:
@@ -402,16 +354,19 @@ def on_send(data):
         email = data['email']
         username = data['username']
         chats = data['message']
+        # Analyze the sentiment of the message
+        sentiment = analyze_sentiment(chats)
         cursor = mysql.connection.cursor()
-    
+        if chats == "":
+            return
         # Use proper string formatting for table name
         table_name = f"`{room}`"
-        insert_query = f"INSERT INTO {table_name} (email, username,chats) VALUES (%s, %s,%s)"
-        cursor.execute(insert_query, (email, username,chats,))
+        insert_query = f"INSERT INTO {table_name} (email, username,chats,sentiment) VALUES (%s, %s,%s,%s)"
+        cursor.execute(insert_query, (email, username,chats,sentiment,))
         mysql.connection.commit()
         cursor.close()
         # Emit the message to all users in the room
-        emit("receive-message", [{'email': email, 'username': username, 'message': chats}], room=room)
+        emit("receive-message", [{'email': email, 'username': username, 'message': chats,'sentiment':sentiment}], room=room)
         
     except Exception as e:
         print("Error:", e)

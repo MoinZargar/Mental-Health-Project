@@ -1,5 +1,5 @@
 
-import React, { useState,useEffect,useMemo } from 'react';
+import React, { useState,useEffect,useMemo, useCallback,useRef } from 'react';
 import { io } from "socket.io-client";
 import './ChatWindow.css';
 import { useParams } from 'react-router-dom';
@@ -8,16 +8,18 @@ import chatService from '../../../Services/chatService.js'
 
 const ChatWindow = () => {
   const roomName=useParams().room;
-  const [selectedRoom, setSelectedRoom] = useState(roomName);
+  const [selectedRoom, setSelectedRoom] = useState(null);
   const [message, setMessage] = useState("");
   const[currentUser,setCurrentUser]=useState(null);
   const[messageList,setMessageList]=useState([]);
   const[roomList,setRoomList]=useState([]);
+  const[joinMessage,setJoinMessage]=useState(null);
   
+  const lastMessageRef = useRef(null);
   const socket = useMemo(
     () =>
       io("http://localhost:5000", {
-        allowEIO3: true 
+        withCredentials: true,
       }),
      
     []
@@ -30,14 +32,20 @@ const ChatWindow = () => {
    
   };
   
- 
+  const user=useCallback(()=>{
+    getAuthService.getCurrentUser().then((data)=>{
+      if(data.status==200){
+        setCurrentUser(data);
+      }
+    })
+  },[currentUser])
 
-  const rooms = ()=>{
+  const rooms = useCallback(()=>{
     chatService.getRooms()
     .then((data)=>{
-
+      
       if(data.status==200){
-       
+        console.log(data);
         let list=[];
         for (let key in data) {
 
@@ -46,16 +54,33 @@ const ChatWindow = () => {
             
           }
         }
-      
+       if(!list.includes(roomName)){
+          list.push(roomName);
+        }
        setRoomList(list);
       }
 
       
     })
-  }
+  },[roomList])
   
+  const joinRoom=useCallback(()=>{
+    socket.emit("join-room", { roomName: roomName });
+    // socket.on("user-joined", (data) => {
+    //   setJoinMessage(data);
+    // });
+  },[roomName])
+
+  const getAllChats=useCallback(()=>{
+    console.log(selectedRoom);
+    socket.emit("get-all-chats", { roomName: selectedRoom });
+    socket.on("receive-all-chats", (data) => {
+      setMessageList(data);
+    });
+    },[selectedRoom]);
 
   const handleRoomClick = (room) => {
+    socket.emit("join-room", { roomName: room });
     setSelectedRoom(room);
   };
 
@@ -66,32 +91,27 @@ const ChatWindow = () => {
   useEffect(() => {
     
     socket.on("connect", () => {
-     
+      
       console.log("connected", socket.id);
     });
-
-     getAuthService.getCurrentUser()
-    .then((user)=>{
-    if(user.status==200){
-
-      setCurrentUser(user);
+    //get current user
+      user();
+      //join room
+      joinRoom();
       //fetch all rooms that user is in
       rooms();
-      //join room
+      //fetch all previous chats from room
+      if(selectedRoom){
+        getAllChats();
+      }
       
-      socket.emit("join-room", { ...user, roomName: selectedRoom });
-      //fetch all messages from room
-      socket.on("receive-all-chats", (data) => {
-        setMessageList(data);
-      });
       
-    }
-  });
-  //receive message
-  socket.on("receive-message", (data) => {
-    setMessageList((prevMessages) => [...prevMessages, ...data]);
-    
-  });
+      
+    //receive messages send by other users in real time
+    socket.on("receive-message", (data) => {
+      setMessageList((prevMessages) => [...prevMessages, ...data]);
+      
+    });
   return () => {
     socket.off("receive-message");
   };
@@ -112,7 +132,7 @@ const ChatWindow = () => {
               className="profile-picture"
             /> */}
             <div className="contact-details">
-              <h3 className="contact-name">{room}</h3>
+              <h3 className="contact-name">{`${room.charAt(0).toUpperCase()+room.slice(1)} Support Room`}</h3>
               
             </div>
           </div>
@@ -146,30 +166,24 @@ const ChatWindow = () => {
                 className="profile-picture"
               /> */}
               <div className="contact-details">
-                <h3 className="contact-name">{selectedRoom}</h3>
+                <h3 className="contact-name">{`${selectedRoom.charAt(0).toUpperCase()+selectedRoom.slice(1)} Support Room`}</h3>
                 
               </div>
             </div>
             <div className="chat-messages">
-              {
-                 messageList.map((message, index) => (
-                  (currentUser.email === message.email) ? (
-                    <div key={index} className="message incoming">
-                      <p className="message-text">
-                        <strong>{message.username}:</strong> {message.message}
-                      </p>
-                    </div>
-                  ) : (
-                    <div key={index} className="message outgoing">
-                      <p className="message-text">
-                        <strong>{message.username}:</strong> {message.message}
-                      </p>
-                    </div>
-                  )
-                ))
-                
-               }
-              
+           
+             
+            {messageList.map((message, index) => (
+          <div
+            key={index}
+            ref={index === messageList.length - 1 ? lastMessageRef : null}
+            className={currentUser.email === message.email ? 'message incoming' : 'message outgoing'}
+          >
+            <p className="message-text">
+              <strong>{message.username}:</strong> {message.message} Sentiment : {message.sentiment}
+            </p>
+          </div>
+        ))}
              
             </div>
             <div className="chat-input">
