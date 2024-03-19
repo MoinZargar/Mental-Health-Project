@@ -180,7 +180,7 @@ const ChatWindow = () => {
             className={currentUser.email === message.email ? 'message incoming' : 'message outgoing'}
           >
             <p className="message-text">
-              <strong>{message.username}:</strong> {message.message} Sentiment : {message.sentiment}
+              <strong>{message.username}:</strong> {message.message}   {message.sentiment}
             </p>
           </div>
         ))}
