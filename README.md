@@ -1,4 +1,5 @@
 # Mental Health Assessment using Natural Language Processing
+https://github.com/user-attachments/assets/bc34f9b7-b9a2-4e0f-9fcc-dbbb01da49d4
 
 ## Project Overview
 This project aims to assess users' mental health by analyzing chat messages and facial expressions. The system includes secure user authentication, standardized testing, personalized chat rooms, sentiment analysis, and facial emotion recognition. The frontend is built using React, and the backend is developed with Flask and MySQL.
@@ -45,24 +46,31 @@ This project aims to assess users' mental health by analyzing chat messages and 
    cd frontend
 
 2. Install dependencies:
+ ```sh
  npm install I
-3. Start the React development server:
+4. Start the React development server:
+ ```sh
  npm start
 
 ### Backend Setup
 
 1. Navigate to the backend directory:
+ ```sh
   cd ../backend
 
 
 2. Create a virtual environment and activate it:
+ ```sh
   python -m venv venv
   venv\Scripts\activate
 3. Install dependencies:
+ ```sh
    pip install -r requirements.txt
 4. Set up the MySQL database:
 5.Run the Flask development server:
+ ```sh
    python app.py
+
    
 
 
