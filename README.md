@@ -1,4 +1,4 @@
-# Mental Health Assessment using Natural Language Processing
+# Mental Health Assessment using NLP
 https://github.com/user-attachments/assets/bc34f9b7-b9a2-4e0f-9fcc-dbbb01da49d4
 
 ## Project Overview
@@ -15,7 +15,7 @@ This project aims to assess users' mental health by analyzing chat messages and 
    - Fostered supportive interactions among individuals facing similar mental health challenges.
 
 3. **Sentiment Analysis Integration:**
-   - Implemented a deep learning model to analyze chat messages, categorizing sentiments into six types.
+   - Implemented a deep learning model LSTM RNN to analyze chat messages, categorizing sentiments into six types.
    - Stored data for comprehensive insights into user emotions and trends.
 
 4. **Facial Sentiment Analysis:**
@@ -41,35 +41,37 @@ This project aims to assess users' mental health by analyzing chat messages and 
 ### Frontend Setup
 
 1. Clone the repository:
-   ```sh
+   ```bash
    git clone https://github.com/MoinZargar/Mental-Health-Project.git
    cd frontend
 
 2. Install dependencies:
- ```sh
- npm install I
+    ```bash
+    npm install I
+    
 4. Start the React development server:
- ```sh
- npm start
+    ```bash
+    npm run dev
 
 ### Backend Setup
 
 1. Navigate to the backend directory:
- ```sh
-  cd ../backend
+    ```bash
+     cd ../backend
 
 
 2. Create a virtual environment and activate it:
- ```sh
-  python -m venv venv
-  venv\Scripts\activate
+    ```bash
+     python -m venv venv
+     venv\Scripts\activate
+    
 3. Install dependencies:
- ```sh
-   pip install -r requirements.txt
-4. Set up the MySQL database:
-5.Run the Flask development server:
- ```sh
-   python app.py
+    ```bash
+      pip install -r requirements.txt
+
+4.Run the Flask development server:
+    ```bash
+      python app.py
 
    
 
