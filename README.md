@@ -70,9 +70,8 @@ This project aims to assess users' mental health by analyzing chat messages and 
       pip install -r requirements.txt
 
 4.Run the Flask development server:
-    ```bash
+   ```bash
       python app.py
-
    
 
 
