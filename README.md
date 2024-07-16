@@ -1,4 +1,4 @@
-# Mental Health Assessment using NLP
+# Mental Health Assessment using NLP (Full Stack Project)
 https://github.com/user-attachments/assets/bc34f9b7-b9a2-4e0f-9fcc-dbbb01da49d4
 
 ## Project Overview
