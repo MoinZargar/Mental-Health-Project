@@ -126,11 +126,7 @@ const ChatWindow = () => {
             className={`contact-item ${selectedRoom === room ? 'selected' : ''}`}
             onClick={() => handleRoomClick(room)}
           >
-            {/* <img
-              src={`profile-pictures/${contact.id}.jpg`} // Replace with the actual path to the profile picture
-              alt={room}
-              className="profile-picture"
-            /> */}
+           
             <div className="contact-details">
               <h3 className="contact-name">{`${room.charAt(0).toUpperCase()+room.slice(1)} Support Room`}</h3>
               
@@ -161,7 +157,7 @@ const ChatWindow = () => {
                 </div>
               )}
               {/* <img
-                src={`profile-pictures/${selectedContact.id}.jpg`} // Replace with the actual path to the profile picture
+                src={`profile-pictures/${selectedContact.id}.jpg`} 
                 alt={selectedContact.name}
                 className="profile-picture"
               /> */}
@@ -180,7 +176,9 @@ const ChatWindow = () => {
             className={currentUser.email === message.email ? 'message incoming' : 'message outgoing'}
           >
             <p className="message-text">
-              <strong>{message.username}:</strong> {message.message}   {message.sentiment}
+              <strong>{message.username}:</strong> {message.message} {message.sentiment && (
+              <span style={{ color: 'red' }}>{message.sentiment}</span>
+               )}
             </p>
           </div>
         ))}

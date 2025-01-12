@@ -13,11 +13,12 @@ export default function App() {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(true)
   useEffect(() => { 
+    
     getAuthService.getCurrentUser()
     .then((user)=>{
       
       if(user.status==200){
-        
+        console.log(user)
         dispatch(login(user))
       }else{
         dispatch(logout())
@@ -31,7 +32,7 @@ export default function App() {
   return !loading ? (
     <div className='min-h-screen flex flex-wrap content-between bg-gray-400'>
       <div className='w-full block'>
-      
+         
         <Header />
         <main >
          <Outlet />

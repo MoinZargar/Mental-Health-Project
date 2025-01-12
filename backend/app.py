@@ -1,23 +1,30 @@
+from calendar import c
+import re
 import bcrypt
 from flask import Flask, jsonify, render_template, request, session
 from flask_socketio import emit, join_room, leave_room, send, SocketIO
 from flask_mysqldb import MySQL
+from h11 import Data
 from Text_Analysis import analyze_sentiment
+from FacialEmotionAnalyzer import FacialEmotionAnalyzer ,get_most_frequent_emotion,capture_flag
+from datetime import timedelta
 app = Flask(__name__)
 
 
 app.config['MYSQL_HOST'] ='localhost'
 app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] ='Alchemist@123'
-app.config['MYSQL_DB'] = 'MentalHealth'
+app.config['MYSQL_PASSWORD'] ='Alchemist@321'
+
 app.config['SECRET_KEY'] ='5791628hghijdedcr13ce0c676dfde280ba245'
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['PORT']='3306'
 
 mysql = MySQL(app)
 socketio = SocketIO(app,manage_session=False,cors_allowed_origins="http://localhost:5173")
-
-
+app.permanent_session_lifetime = timedelta(days=3)
+prev_Index=0
+face_emotion = []
+text_emotion = []   
 
 def create_database():
    cursor = mysql.connection.cursor()
@@ -91,13 +98,26 @@ def create_database():
         sentiment VARCHAR(255),
         FOREIGN KEY (email) REFERENCES users(email)
     );
+                  
 ''')
-
+   cursor.execute('''
+        CREATE TABLE IF NOT EXISTS facialEmotion (
+            id INT(11) AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(120),
+            username VARCHAR(80),
+            question VARCHAR(255),
+            answer VARCHAR(255),
+            emotion VARCHAR(80),
+            FOREIGN KEY (email) REFERENCES users(email)
+        );
+                  
+''')
    cursor.close()
 
 with app.app_context():
     create_database()
 
+app.config['MYSQL_DB'] = 'MentalHealth'
 
 #hashing password
 def hash_password(password):
@@ -160,6 +180,7 @@ def login():
                 return jsonify({'message': 'Please check email and Password','status':400})
             else:
                 if verify_password(password, result[2]):
+                    session.permanent=True
                     session['email'] = email
                     session['username']=result[1]
                     name=session['username']
@@ -370,6 +391,116 @@ def on_send(data):
         
     except Exception as e:
         print("Error:", e)
+
+@app.route('/api/analyzeFacialEmotion', methods=['POST'])
+def analyze_facial_emotion():
+    try:
+        global capture_flag
+        global face_emotion
+        global text_emotion 
+        data = request.json
+        index = data.get('index')
+        question=data.get('question')
+        answer = data.get('answer')
+        email=data.get('email')
+        username=data.get('username')
+        if index == 0 and answer is None:
+            return jsonify({'message': 'Please provide an answer to the question', 'status': 400})
+        if index == 7:
+            capture_flag = False
+            return jsonify({'message': 'Facial emotion analysis completed', 'status': 200})
+
+        if index == 0:
+            capture_flag= False # Stop any ongoing capturing process
+            FacialEmotionAnalyzer()
+
+        else :
+            capture_flag = False
+            facial_emotion = get_most_frequent_emotion()
+            face_emotion.append(facial_emotion)
+            text_emotion.append(analyze_sentiment(answer))
+            FacialEmotionAnalyzer() 
+
+            cursor=mysql.connection.cursor()
+            insert_query = f"INSERT INTO facialEmotion (email, username, question, answer, emotion) VALUES (%s, %s, %s, %s, %s)"
+            cursor.execute(insert_query, (email, username, question, answer, face_emotion[-1],))
+            mysql.connection.commit()
+            cursor.close()
+        
+        
+        return jsonify({'textEmotion': text_emotion, 'facialEmotion': face_emotion, 'status': 200})
+
+    except Exception as e:
+        print(f"Error analyzing facial emotion: {e}")
+        return jsonify({'message': 'Internal Server Error', 'status': 500})
+
+    return jsonify({'message': 'Method Not Allowed', 'status': 405})
+
+@app.route('/api/emotion_percentage', methods=['POST'])
+def emotion_count():
+    try:
+        text_sentiment_percentage = {
+                'sadness': 0,
+                'joy': 0,
+                'love': 0,
+                'anger': 0,
+                'fear': 0,
+                'surprise': 0
+        }
+        tables = ['depression', 'anxiety', 'bipolar', 'schizophrenia']
+        total_comments = 0
+        data = request.json
+        email = data.get('email')
+        
+        
+        cursor = mysql.connection.cursor()
+        
+        for table in tables:
+            
+            
+                # Query to get count of each sentiment for the specific email
+                cursor.execute(f'''
+                    SELECT sentiment, COUNT(*) as count
+                    FROM {table}
+                    WHERE email = %s
+                    GROUP BY sentiment;
+                ''', (email,))
+                sentiment_counts = cursor.fetchall()
+                # Aggregate counts
+                for row in sentiment_counts:
+                    sentiment = row[0]
+                    count = row[1]
+                   
+                    text_sentiment_percentage[sentiment] += count
+                    total_comments += count
+
+        if total_comments > 0:
+            for sentiment in text_sentiment_percentage:
+                text_sentiment_percentage[sentiment] = text_sentiment_percentage[sentiment] / total_comments * 100
+        # Query to get count of each emotion from facialEmotion table
+        cursor.execute('''
+            SELECT emotion, COUNT(*) as count
+            FROM facialEmotion
+            WHERE email = %s
+            GROUP BY emotion;
+        ''', (email,))
+        emotion_counts = cursor.fetchall()
+
+        # Calculate total number of emotions
+        total_emotions = sum(count for emotion, count in emotion_counts)
+
+        # Calculate percentage of each emotion
+        emotion_percentages = {}
+        for emotion, count in emotion_counts:
+            percentage = (count / total_emotions) * 100
+            emotion_percentages[emotion] = percentage
+
+        cursor.close()
+        return jsonify({'textEmotionPercentage': text_sentiment_percentage, 'facialEmotionPercentage': emotion_percentages,'status': 200})
+    except Exception as e:
+        print(f"Error getting emotion count: {e}")
+        return jsonify({'message': 'Internal Server Error', 'status': 500})
+    
 
 
 

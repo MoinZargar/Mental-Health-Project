@@ -15,7 +15,8 @@ import SubTests from './components/pages/SubTests.jsx'
 import TestPage from './components/TestPage.jsx'
 import Result from './components/pages/Result.jsx'
 import ChatWindow from './components/pages/Chat/ChatWindow.jsx'
-
+import FacialEmotionAnalyzer from './components/pages/FacialEmotionAnalyzer.jsx'
+import Dashboard from './components/pages/Dashboard.jsx'
 const router = createBrowserRouter([
   {
     path: "/",
@@ -25,10 +26,7 @@ const router = createBrowserRouter([
             path: "/",
             element: <Home />,
         },
-        {
-          path: "/sentiment",
-          element: <Sentiment />,
-        },
+        
         {
           path: "/tests",
           element: (
@@ -88,8 +86,22 @@ const router = createBrowserRouter([
               </AuthLayout>
           ),
         },
-       
-
+        {
+          path : "/facialEmotionAnalyzer",
+          element: (
+            <AuthLayout authentication={true}>
+                <FacialEmotionAnalyzer />
+            </AuthLayout>
+        ),
+        },
+        {
+          path: "/dashboard",
+          element: (
+              <AuthLayout authentication={true}>
+                  <Dashboard />
+              </AuthLayout>
+          ),
+        },
 
         
        

@@ -424,6 +424,35 @@ export class TestQuestions{
           ]
          return schizophrenia; 
     }
+    FacialEmotionScreening(){
+      const facialEmotion=[
+        {
+          "id": 1,
+          "question": "How have you been feeling emotionally over the past few weeks?"
+        },
+        {
+          "id": 2,
+          "question": "Can you describe a recent event that made you feel particularly happy or sad?"
+        },
+        {
+          "id": 3,
+          "question": "How do you typically cope with stress or difficult situations?"
+        },
+        {
+          "id": 4,
+          "question": "Do you often feel anxious or worried? If so, when does this happen?"
+        },
+        {
+          "id": 5,
+          "question": "How do you feel about your relationships with family and friends?"
+        },
+        {
+          "id": 6,
+          "question": "What are some things that you enjoy or look forward to?"
+        }
+      ]
+      return facialEmotion;
+    }
 };
 const TestQna = new TestQuestions();
 export default TestQna;

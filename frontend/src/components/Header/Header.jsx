@@ -15,26 +15,32 @@ function Header() {
       slug: "/",
       active: true
     }, 
-    {
-      name: "Sentiment",
-      slug: "/sentiment",
-      active: authStatus,
-  },
+   
   {
     name: "Tests",
     slug: "/tests",
     active: authStatus,
  },
-    {
+ {
+  name: "Facial Emotion",
+  slug: "/facialEmotionAnalyzer",
+  active: authStatus,
+},
+{
       name: "Login",
       slug: "/login",
       active: !authStatus,
-  },
-  {
+},
+{
       name: "Signup",
       slug: "/signup",
       active: !authStatus,
-  },
+},
+{
+  name: "Dashboard",
+  slug: "/dashboard",
+  active: authStatus,
+},
   
   ]
 
